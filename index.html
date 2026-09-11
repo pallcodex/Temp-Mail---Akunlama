@@ -71,13 +71,13 @@
         <div class="title">Temp Mail Dashboard</div>
         <div class="subtitle">Akunlama API · Powered by Noapl</div>
       </div>
-      <div id="status-badge" class="badge">● Offline</div>
+      <div id="status-badge" class="badge">● Connecting...</div>
     </div>
 
     <div class="controls">
       <div class="input-group">
         <input id="username-input" type="text" placeholder="Masukkan username custom...">
-        <button onclick="setCustomEmail()" class="btn-secondary">Set</button>
+        <button onclick="handleSetCustom()" class="btn-secondary">Set</button>
       </div>
       <button onclick="generateRandom()" class="btn-primary">Random Email</button>
     </div>
@@ -89,7 +89,7 @@
       </div>
       <div class="card-btns">
         <button onclick="copyEmail()" class="btn-secondary btn-sm">Salin</button>
-        <button onclick="loadInbox()" class="btn-outline btn-sm">Refresh</button>
+        <button onclick="checkInbox()" class="btn-outline btn-sm">Refresh</button>
       </div>
     </div>
 
@@ -131,22 +131,21 @@
   </div>
 
 <script>
-  // Dynamic API Base URL menembak ke domain Vercel kamu
   const API_BASE = window.location.origin + '/api';
 
   let currentUsername = '';
   let autoRefreshInterval = null;
 
-  // 1. Fungsi Dapatkan / Set Mailbox Baru
-  async function generateEmail() {
+  async function generateRandom() {
     try {
-      showLoading(true);
+      setStatus('● Connecting...', false);
       const res = await fetch(`${API_BASE}/gen`);
       const data = await res.json();
 
       if (data.status === 'success') {
         currentUsername = data.data.username;
-        updateEmailDisplay(data.data.email);
+        document.getElementById('active-email').innerText = data.data.email;
+        setStatus('● Ready', true);
         await checkInbox();
         startAutoRefresh();
       } else {
@@ -155,27 +154,28 @@
     } catch (err) {
       console.error('Fetch error:', err);
       alert('Gagal terhubung ke API Vercel.');
-    } finally {
-      showLoading(false);
+      setStatus('● Error', false);
     }
   }
 
-  // 2. Fungsi Set Custom Email
-  async function setCustomEmail(customName) {
-    if (!customName || !customName.trim()) {
-      alert('Masukkan username email yang diinginkan!');
+  async function handleSetCustom() {
+    const input = document.getElementById('username-input');
+    const name = input.value.trim();
+    if (!name) {
+      alert('Masukkan username terlebih dahulu!');
       return;
     }
 
     try {
-      showLoading(true);
-      const cleanUser = customName.trim().replace(/@.*/, '');
+      setStatus('● Connecting...', false);
+      const cleanUser = name.replace(/@.*/, '');
       const res = await fetch(`${API_BASE}/use?user=${encodeURIComponent(cleanUser)}`);
       const data = await res.json();
 
       if (data.status === 'success') {
         currentUsername = data.data.username;
-        updateEmailDisplay(data.data.email);
+        document.getElementById('active-email').innerText = data.data.email;
+        setStatus('● Ready', true);
         await checkInbox();
         startAutoRefresh();
       } else {
@@ -184,12 +184,10 @@
     } catch (err) {
       console.error('Fetch error:', err);
       alert('Gagal terhubung ke API Vercel.');
-    } finally {
-      showLoading(false);
+      setStatus('● Error', false);
     }
   }
 
-  // 3. Fungsi Cek & Ambil Inbox
   async function checkInbox() {
     if (!currentUsername) return;
 
@@ -198,19 +196,17 @@
       const data = await res.json();
 
       if (data.status === 'success') {
-        renderInboxTable(data.messages || []);
+        renderInbox(data.messages || []);
       }
     } catch (err) {
       console.error('Error fetching inbox:', err);
     }
   }
 
-  // 4. Fungsi Baca Detail Email (Dengan OTP & Link)
   async function readEmail(indexOrKey) {
     if (!currentUsername) return;
 
     try {
-      showLoading(true);
       const res = await fetch(`${API_BASE}/read?user=${encodeURIComponent(currentUsername)}&index=${encodeURIComponent(indexOrKey)}`);
       const data = await res.json();
 
@@ -222,67 +218,82 @@
     } catch (err) {
       console.error('Error reading email:', err);
       alert('Gagal terhubung ke API Vercel.');
-    } finally {
-      showLoading(false);
     }
   }
 
-  // Auto Refresh Inbox setiap 5 detik
-  function startAutoRefresh() {
-    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-    autoRefreshInterval = setInterval(checkInbox, 5000);
-  }
-
-  // Helper UI Renderer (Disesuaikan dengan ID Element HTML kamu)
-  function updateEmailDisplay(emailStr) {
-    const el = document.getElementById('email-address') || document.getElementById('email') || document.getElementById('email-display');
-    if (el) {
-      if (el.tagName === 'INPUT') el.value = emailStr;
-      else el.innerText = emailStr;
-    }
-  }
-
-  function renderInboxTable(messages) {
-    const container = document.getElementById('inbox-list') || document.getElementById('messages') || document.querySelector('tbody');
-    if (!container) return;
+  function renderInbox(messages) {
+    const container = document.getElementById('inbox-container');
+    document.getElementById('inbox-count').innerText = `${messages.length} Pesan`;
 
     if (messages.length === 0) {
-      container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px;">Belum ada email masuk. Menunggu pesan...</td></tr>`;
+      container.innerHTML = `<div class="empty-state">Belum ada email masuk. Menunggu pesan...</div>`;
       return;
     }
 
     container.innerHTML = messages.map(msg => `
-      <tr onclick="readEmail('${msg.index}')" style="cursor:pointer;">
-        <td><strong>${escapeHtml(msg.from || 'Unknown')}</strong></td>
-        <td>${escapeHtml(msg.subject || '(No Subject)')}</td>
-        <td>${new Date(msg.date).toLocaleTimeString()}</td>
-        <td><button type="button" onclick="event.stopPropagation(); readEmail('${msg.index}')">Baca</button></td>
-      </tr>
+      <div class="mail-item" onclick="readEmail('${msg.index}')">
+        <div>
+          <div class="mail-sender">${escapeHtml(msg.from || 'Unknown')}</div>
+          <div class="mail-subject">${escapeHtml(msg.subject || '(No Subject)')}</div>
+        </div>
+        <div class="mail-time">${msg.date ? new Date(msg.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}</div>
+      </div>
     `).join('');
   }
 
-  function renderEmailDetail(detail) {
-    const modal = document.getElementById('email-modal') || document.getElementById('modal');
-    const content = document.getElementById('email-content') || document.getElementById('message-detail');
+  function renderEmailDetail(data) {
+    document.getElementById('mail-subject').innerText = data.subject || '(No Subject)';
+    document.getElementById('mail-from').innerText = `Dari: ${data.from || 'Unknown'}`;
+    document.getElementById('mail-date').innerText = data.date ? new Date(data.date).toLocaleString('id-ID') : '';
+    document.getElementById('mail-body').innerText = data.text || 'Kosong';
 
-    const htmlBody = `
-      <div style="padding: 15px; border: 1px solid #ccc; border-radius: 8px;">
-        <h3>${escapeHtml(detail.subject)}</h3>
-        <p><strong>Dari:</strong> ${escapeHtml(detail.from)}</p>
-        ${detail.otp ? `<div style="background:#e8f5e9; padding:10px; border-radius:5px; font-weight:bold; color:#2e7d32;">Kode OTP/Verifikasi: ${detail.otp}</div>` : ''}
-        <hr/>
-        <div style="margin-top:15px;">${detail.html || `<pre>${escapeHtml(detail.text)}</pre>`}</div>
-      </div>
-    `;
+    // OTP
+    const otpBox = document.getElementById('otp-container');
+    if (data.otp) {
+      document.getElementById('otp-code').innerText = data.otp;
+      otpBox.style.display = 'block';
+    } else {
+      otpBox.style.display = 'none';
+    }
 
-    if (content) content.innerHTML = htmlBody;
-    if (modal) modal.style.display = 'block';
-    else alert(`[PESAN MASUK]\n\nPengirim: ${detail.from}\nSubjek: ${detail.subject}\n\nIsi:\n${detail.text}`);
+    // Links
+    const linksBox = document.getElementById('links-container');
+    const linksList = document.getElementById('links-list');
+    if (data.links && data.links.length > 0) {
+      linksList.innerHTML = data.links.map(link => `
+        <a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer" class="link-btn">Buka Link ↗</a>
+      `).join('');
+      linksBox.style.display = 'block';
+    } else {
+      linksBox.style.display = 'none';
+    }
+
+    const readerBox = document.getElementById('reader-box');
+    readerBox.classList.add('active');
   }
 
-  function showLoading(state) {
-    const spinner = document.getElementById('loading') || document.getElementById('spinner');
-    if (spinner) spinner.style.display = state ? 'block' : 'none';
+  function closeReader() {
+    document.getElementById('reader-box').classList.remove('active');
+  }
+
+  function copyEmail() {
+    const email = document.getElementById('active-email').innerText;
+    if (email && email !== 'Belum Dipilih') {
+      navigator.clipboard.writeText(email);
+      alert('Email berhasil disalin!');
+    }
+  }
+
+  function setStatus(text, isReady) {
+    const badge = document.getElementById('status-badge');
+    badge.innerText = text;
+    if (isReady) badge.classList.add('ready');
+    else badge.classList.remove('ready');
+  }
+
+  function startAutoRefresh() {
+    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+    autoRefreshInterval = setInterval(checkInbox, 5000);
   }
 
   function escapeHtml(text) {
@@ -290,28 +301,8 @@
     return text.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
   }
 
-  // Auto Generate Email saat halaman pertama kali di-load
   document.addEventListener('DOMContentLoaded', () => {
-    generateEmail();
-
-    // Event listener untuk tombol Custom Email (jika ada tombol id "btn-custom")
-    const btnCustom = document.getElementById('btn-custom') || document.getElementById('btn-change');
-    if (btnCustom) {
-      btnCustom.addEventListener('click', () => {
-        const input = document.getElementById('input-custom') || document.getElementById('custom-username');
-        if (input) setCustomEmail(input.value);
-        else {
-          const name = prompt('Masukkan username email custom yang diinginkan:');
-          if (name) setCustomEmail(name);
-        }
-      });
-    }
-
-    // Event listener untuk tombol Refresh (jika ada tombol id "btn-refresh")
-    const btnRefresh = document.getElementById('btn-refresh');
-    if (btnRefresh) {
-      btnRefresh.addEventListener('click', checkInbox);
-    }
+    generateRandom();
   });
 </script>
 </body>
