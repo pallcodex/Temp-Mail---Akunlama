@@ -1,23 +1,9 @@
 {
   "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "senyum.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "index.html",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "senyum.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "index.html"
+      "source": "/api/:path*",
+      "destination": "/senyum.js"
     }
   ]
 }
