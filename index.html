@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Temp Mail - ppalw</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #0b0f19; color: #e2e8f0; display: flex; justify-content: center; padding: 20px 12px; min-height: 100vh; }
+    .container { width: 100%; max-width: 680px; background-color: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 16px; margin-bottom: 20px; }
+    .title { font-size: 1.4rem; font-weight: 800; color: #fb923c; }
+    .subtitle { font-size: 0.75rem; color: #94a3b8; margin-top: 2px; }
+    .badge { font-size: 0.75rem; font-weight: 600; padding: 4px 12px; border-radius: 999px; background: #0f172a; color: #64748b; border: 1px solid #334155; }
+    .badge.ready { background: rgba(16, 185, 129, 0.1); color: #34d399; border-color: rgba(16, 185, 129, 0.3); }
+    
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+    .input-group { flex: 1; min-width: 200px; display: flex; gap: 8px; }
+    input[type="text"] { flex: 1; background: #0f172a; border: 1px solid #334155; color: #fff; padding: 10px 14px; border-radius: 10px; font-size: 0.9rem; outline: none; }
+    input[type="text"]:focus { border-color: #f97316; }
+    button { cursor: pointer; border: none; border-radius: 10px; font-weight: 600; font-size: 0.85rem; padding: 10px 16px; transition: all 0.2s; }
+    .btn-secondary { background: #334155; color: #f8fafc; }
+    .btn-secondary:hover { background: #475569; }
+    .btn-primary { background: linear-gradient(135deg, #f97316, #fbbf24); color: #0f172a; font-weight: 700; width: 100%; }
+    .btn-primary:hover { opacity: 0.9; }
+    @media(min-width: 500px) { .btn-primary { width: auto; } }
+
+    .card { background: #0f172a; border: 1px solid #334155; padding: 16px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .email-label { font-size: 0.75rem; color: #64748b; display: block; margin-bottom: 2px; }
+    .email-val { font-family: monospace; font-size: 1.05rem; font-weight: 700; color: #fb923c; word-break: break-all; }
+    .card-btns { display: flex; gap: 8px; }
+    .btn-sm { padding: 6px 12px; font-size: 0.75rem; border-radius: 8px; }
+    .btn-outline { background: transparent; color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.3); }
+    .btn-outline:hover { background: rgba(251, 146, 60, 0.1); }
+
+    .inbox-header { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 10px; }
+    .inbox-list { display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; margin-bottom: 20px; }
+    .empty-state { text-align: center; padding: 30px; color: #64748b; font-size: 0.85rem; border: 1px dashed #334155; border-radius: 12px; font-style: italic; }
+    .mail-item { background: #0f172a; border: 1px solid #334155; padding: 12px 16px; border-radius: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
+    .mail-item:hover { background: #1e293b; }
+    .mail-sender { font-size: 0.75rem; color: #fb923c; font-weight: 600; }
+    .mail-subject { font-size: 0.85rem; font-weight: 600; color: #f1f5f9; margin-top: 2px; }
+    .mail-time { font-size: 0.7rem; color: #64748b; white-space: nowrap; }
+
+    .reader { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 18px; display: none; margin-top: 15px; }
+    .reader.active { display: block; }
+    .reader-top { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #1e293b; padding-bottom: 12px; margin-bottom: 12px; }
+    .reader-title { font-size: 1.1rem; color: #fdba74; font-weight: 700; }
+    .reader-sub { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
+    .close-btn { background: none; color: #64748b; font-size: 1.2rem; padding: 0 4px; }
+    .close-btn:hover { color: #f8fafc; }
+
+    .otp-box { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 12px; }
+    .otp-title { font-size: 0.7rem; color: #34d399; font-weight: 600; }
+    .otp-code { font-family: monospace; font-size: 1.4rem; font-weight: 800; color: #6ee7b7; letter-spacing: 2px; }
+
+    .links-box { margin-bottom: 12px; }
+    .links-title { font-size: 0.75rem; color: #94a3b8; font-weight: 600; margin-bottom: 6px; }
+    .links-flex { display: flex; flex-wrap: wrap; gap: 8px; }
+    .link-btn { display: inline-block; background: rgba(249, 115, 22, 0.15); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.3); padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-family: monospace; text-decoration: none; word-break: break-all; }
+    .link-btn:hover { background: rgba(249, 115, 22, 0.25); }
+
+    .mail-body { background: #020617; border: 1px solid #1e293b; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 0.8rem; color: #cbd5e1; white-space: pre-wrap; max-height: 220px; overflow-y: auto; line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <div>
+        <div class="title">Temp Mail Dashboard</div>
+        <div class="subtitle">Akunlama API · Powered by Noapl</div>
+      </div>
+      <div id="status-badge" class="badge">● Offline</div>
+    </div>
+
+    <div class="controls">
+      <div class="input-group">
+        <input id="username-input" type="text" placeholder="Masukkan username custom...">
+        <button onclick="setCustomEmail()" class="btn-secondary">Set</button>
+      </div>
+      <button onclick="generateRandom()" class="btn-primary">Random Email</button>
+    </div>
+
+    <div class="card">
+      <div>
+        <span class="email-label">Active Address</span>
+        <div id="active-email" class="email-val">Belum Dipilih</div>
+      </div>
+      <div class="card-btns">
+        <button onclick="copyEmail()" class="btn-secondary btn-sm">Salin</button>
+        <button onclick="loadInbox()" class="btn-outline btn-sm">Refresh</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="inbox-header">
+        <span>Inbox List</span>
+        <span id="inbox-count">0 Pesan</span>
+      </div>
+      <div id="inbox-container" class="inbox-list">
+        <div class="empty-state">Pilih atau buat email untuk melihat pesan masuk.</div>
+      </div>
+    </div>
+
+    <div id="reader-box" class="reader">
+      <div class="reader-top">
+        <div>
+          <div id="mail-subject" class="reader-title"></div>
+          <div id="mail-from" class="reader-sub"></div>
+          <div id="mail-date" class="reader-sub" style="font-size: 0.65rem;"></div>
+        </div>
+        <button onclick="closeReader()" class="close-btn">✕</button>
+      </div>
+
+      <div id="otp-container" class="otp-box" style="display: none;">
+        <div class="otp-title">Kode OTP Detected</div>
+        <div id="otp-code" class="otp-code"></div>
+      </div>
+
+      <div id="links-container" class="links-box" style="display: none;">
+        <div class="links-title">Link Ditemukan (Klik untuk Buka):</div>
+        <div id="links-list" class="links-flex"></div>
+      </div>
+
+      <div>
+        <div class="links-title">Isi Pesan:</div>
+        <div id="mail-body" class="mail-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // GANTI URL DI BAWAH INI DENGAN URL API RENDER LO
+    const API = 'https://tempmail-lann.onrender.com/api'; 
+    let currentUsername = '';
+
+    async function generateRandom() {
+      try {
+        const res = await fetch(`${API}/gen`).then(r => r.json());
+        if (res.status === 'success') {
+          setActiveUser(res.data.username, res.data.email);
+        }
+      } catch (err) { alert('Gagal terhubung ke API Server!'); }
+    }
+
+    async function setCustomEmail() {
+      const input = document.getElementById('username-input').value.trim();
+      if (!input) return alert('Masukkan username terlebih dahulu!');
+      try {
+        const res = await fetch(`${API}/use/${input}`).then(r => r.json());
+        if (res.status === 'success') {
+          setActiveUser(res.data.username, res.data.email);
+        }
+      } catch (err) { alert('Gagal set custom email!'); }
+    }
+
+    function setActiveUser(user, fullEmail) {
+      currentUsername = user;
+      document.getElementById('username-input').value = user;
+      document.getElementById('active-email').innerText = fullEmail;
+      const badge = document.getElementById('status-badge');
+      badge.className = "badge ready";
+      badge.innerText = "● Ready";
+      closeReader();
+      loadInbox();
+    }
+
+    async function loadInbox() {
+      if (!currentUsername) return;
+      const container = document.getElementById('inbox-container');
+      container.innerHTML = `<div class="empty-state">Memuat inbox...</div>`;
+
+      try {
+        const res = await fetch(`${API}/inbox/${currentUsername}`).then(r => r.json());
+        document.getElementById('inbox-count').innerText = `${res.total || 0} Pesan`;
+
+        if (!res.messages || res.messages.length === 0) {
+          container.innerHTML = `<div class="empty-state">Inbox kosong. Belum ada email masuk.</div>`;
+          return;
+        }
+
+        container.innerHTML = res.messages.map(m => `
+          <div onclick="readEmail('${m.index}')" class="mail-item">
+            <div style="overflow: hidden; padding-right: 10px;">
+              <div class="mail-sender">${m.from || 'Unknown Sender'}</div>
+              <div class="mail-subject">${m.subject}</div>
+            </div>
+            <div class="mail-time">${m.date ? new Date(m.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}</div>
+          </div>
+        `).join('');
+      } catch (err) {
+        container.innerHTML = `<div class="empty-state" style="color: #f87171;">Gagal memuat inbox.</div>`;
+      }
+    }
+
+    async function readEmail(index) {
+      try {
+        const res = await fetch(`${API}/read/${currentUsername}/${index}`).then(r => r.json());
+        if (res.status === 'success') {
+          const d = res.data;
+          document.getElementById('mail-subject').innerText = d.subject;
+          document.getElementById('mail-from').innerText = `Dari: ${d.from}`;
+          document.getElementById('mail-date').innerText = d.date ? new Date(d.date).toLocaleString() : '';
+          document.getElementById('mail-body').innerText = d.text || 'Tidak ada konten teks.';
+
+          // Handle OTP
+          const otpContainer = document.getElementById('otp-container');
+          if (d.otp) {
+            document.getElementById('otp-code').innerText = d.otp;
+            otpContainer.style.display = 'block';
+          } else {
+            otpContainer.style.display = 'none';
+          }
+
+          // Handle Links
+          const linksContainer = document.getElementById('links-container');
+          const linksList = document.getElementById('links-list');
+          linksList.innerHTML = '';
+
+          if (d.links && d.links.length > 0) {
+            d.links.forEach(link => {
+              const a = document.createElement('a');
+              a.href = link;
+              a.target = '_blank';
+              a.className = 'link-btn';
+              a.innerText = `↗ ${link}`;
+              linksList.appendChild(a);
+            });
+            linksContainer.style.display = 'block';
+          } else {
+            linksContainer.style.display = 'none';
+          }
+
+          const reader = document.getElementById('reader-box');
+          reader.classList.add('active');
+          reader.scrollIntoView({ behavior: 'smooth' });
+        }
+      } catch (err) { alert('Gagal membaca detail pesan!'); }
+    }
+
+    function closeReader() {
+      document.getElementById('reader-box').classList.remove('active');
+    }
+
+    function copyEmail() {
+      const email = document.getElementById('active-email').innerText;
+      if (email && email !== 'Belum Dipilih') {
+        navigator.clipboard.writeText(email);
+        alert('Email berhasil disalin!');
+      }
+    }
+  </script>
+</body>
+</html>
